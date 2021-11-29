@@ -29,34 +29,37 @@
 
 #include <variant>
 #include <vector>
-
-#define token(NAME) TOKEN_TYPE::NAME
+#include <utility>
 
 #define PARSE_STACK_VALUE_TYPE std::variant<PARSE_STACK_VALUES>
 #define PARSE_STACK_VALUE(ELEMENT, TYPE)  std::get<TYPE>(ELEMENT)
 
 namespace parserGenerator {
-    template<typename T> // To allow the specific variants to be defined later
+    template<typename StackValueType, typename StackElementType> // To allow the specific variants to be defined later
     class ParserStack {
         private:
-         std::vector<T> internalStack;
+         std::vector<std::pair<StackValueType, StackElementType>> internalStack;
          public:
          ParserStack() {}
          ~ParserStack() {}
          template<typename ValueType> ValueType pop() {
-           ValueType result = PARSE_STACK_VALUE(internalStack.back(), ValueType);
+           ValueType result = PARSE_STACK_VALUE(internalStack.back().first, ValueType);
            internalStack.pop_back();
            return result;
          }
          template<typename ValueType> ValueType peek(int offsetFromTop) {
-           return PARSE_STACK_VALUE(internalStack.at(internalStack.size() - 1 - offsetFromTop), ValueType);
+           return PARSE_STACK_VALUE(internalStack.at(internalStack.size() - 1 - offsetFromTop).first, ValueType);
          }
-         template<typename ValueType> void push(ValueType value) {
-           internalStack.push_back(value);
+         StackElementType peekType(int offsetFromTop) {
+           return internalStack.at(internalStack.size() - 1 - offsetFromTop).second;
          }
+         template<typename ValueType> void push(ValueType value, StackElementType type) {
+           internalStack.push_back(std::pair<StackValueType, StackElementType>(value, type));
+         }
+         int size() { return internalStack.size(); }
     };
 }
 
-#define PARSE_STACK parserGenerator::ParserStack<PARSE_STACK_VALUE_TYPE> parseStack
+#define PARSE_STACK parserGenerator::ParserStack<PARSE_STACK_VALUE_TYPE, PARSE_STACK_ELEMENT_TYPE>
 
 #endif
